@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Local test fixtures
+sample-audio/
+test-*/
+
+# Local logs and temporary output
+*.log
+server.out.log
+server.err.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db

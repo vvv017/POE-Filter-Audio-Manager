@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>POE Filter Audio Manager</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <div class="title-row">
+            <h1>POE Filter Audio Manager</h1>
+            <button id="languageToggle" class="language-toggle" type="button" title="Switch to English" aria-label="Switch to English">EN</button>
+          </div>
+          <p id="folderSummary">尚未載入資料夾</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="volume-control" aria-label="試聽音量">
+            <label for="volumeSlider">音量</label>
+            <input id="volumeSlider" type="range" min="0" max="1" step="0.01">
+            <span id="volumeValue">80%</span>
+          </div>
+          <button id="reloadButton" class="icon-button" title="重新整理" aria-label="重新整理">↻</button>
+        </div>
+      </header>
+
+      <section class="folder-strip" aria-label="資料夾設定">
+        <label for="folderInput">音效資料夾</label>
+        <input id="folderInput" spellcheck="false" autocomplete="off" placeholder="貼上 Path of Exile 過濾器音效資料夾路徑">
+        <button id="loadButton">載入</button>
+      </section>
+      <div id="defaultFolders" class="folder-suggestions" aria-live="polite"></div>
+
+      <main class="workspace">
+        <aside class="rule-panel">
+          <div class="panel-title">
+            <span>規則</span>
+            <span id="ruleCount">0</span>
+          </div>
+          <div id="presetGrid" class="preset-grid"></div>
+          <button id="addRuleButton" class="add-rule-button" type="button" title="新增規則" aria-label="新增規則">+</button>
+          <form id="ruleEditor" class="rule-editor" hidden>
+            <div class="rule-editor-title" id="ruleEditorTitle">新增規則</div>
+            <label for="ruleSlot">編號</label>
+            <input id="ruleSlot" inputmode="numeric" autocomplete="off" placeholder="例如 8">
+            <label for="ruleKey">名稱</label>
+            <input id="ruleKey" autocomplete="off" spellcheck="false" placeholder="例如 scarab">
+            <label for="ruleLabel">顯示名稱</label>
+            <input id="ruleLabel" autocomplete="off" spellcheck="false" placeholder="例如 Scarab">
+            <div id="ruleEditorStatus" class="rule-editor-status"></div>
+            <div class="rule-editor-actions">
+              <button id="saveRuleButton" type="submit">儲存</button>
+              <button id="cancelRuleButton" type="button">取消</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="file-panel">
+          <div class="file-toolbar">
+            <input id="searchInput" placeholder="搜尋音效檔" autocomplete="off">
+            <select id="ruleFilter" aria-label="規則篩選">
+              <option value="all">全部音效</option>
+              <option value="rule">已符合規則</option>
+              <option value="free">未套規則</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>檔名</th>
+                  <th>規則</th>
+                  <th>大小</th>
+                  <th>修改時間</th>
+                </tr>
+              </thead>
+              <tbody id="fileTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="inspector">
+          <div class="panel-title">
+            <span>操作</span>
+            <span id="selectionBadge">未選取</span>
+          </div>
+
+          <div class="now-playing">
+            <div>
+              <span class="field-label">目前音效</span>
+              <div class="current-name-row">
+                <strong id="selectedName">請先選擇一個音效</strong>
+                <button id="editNameButton" class="mini-icon-button" type="button" title="手動編輯檔名" aria-label="手動編輯檔名" disabled>✎</button>
+              </div>
+            </div>
+            <form id="manualRenameForm" class="manual-rename-form" hidden>
+              <label for="manualNameInput">手動檔名</label>
+              <div class="manual-name-row">
+                <input id="manualNameInput" autocomplete="off" spellcheck="false" placeholder="輸入新檔名">
+                <span id="manualExtension">.mp3</span>
+              </div>
+              <div id="manualNameStatus" class="status-line compact">等待檔名</div>
+              <div class="manual-actions">
+                <button id="manualRenameButton" class="primary-action" type="submit" disabled>手動改名</button>
+                <button id="cancelManualRenameButton" type="button">取消</button>
+              </div>
+            </form>
+            <audio id="audioPlayer" preload="none"></audio>
+          </div>
+
+          <div class="rename-form">
+            <label for="targetRule">目標檔名</label>
+            <select id="targetRule">
+              <option value="">選擇規則</option>
+            </select>
+
+            <label for="strategySelect">重名處理</label>
+            <select id="strategySelect">
+              <option value="fail">先停下來</option>
+              <option value="swap">交換名字</option>
+              <option value="auto">舊檔加後綴</option>
+            </select>
+
+            <div id="conflictStatus" class="status-line">等待目標名字</div>
+            <button id="applyButton" class="primary-action" disabled>套用改名</button>
+          </div>
+
+          <div class="activity">
+            <div class="panel-title small">
+              <span>紀錄</span>
+              <button id="clearLogButton" class="text-button">清空</button>
+            </div>
+            <ul id="activityLog"></ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
