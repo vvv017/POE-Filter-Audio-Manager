@@ -27,7 +27,6 @@
    npm run desktop
    ```
 
-   Windows 桌面打包版建議使用 `release\POE Filter Audio Manager Setup 0.1.0.exe` 走標準安裝精靈後啟動；如果不想安裝，也可以使用 `release\POE Filter Audio Manager 0.1.0.exe` 可攜版。看你咯
 
 3. 貼上 POE 過濾器音效所在資料夾，例如：
 
@@ -88,7 +87,6 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    npm run desktop
    ```
 
-   For the packaged Windows desktop app, prefer `release\POE Filter Audio Manager Setup 0.1.0.exe` and launch the installed app afterward. The setup uses a standard installer wizard. If you do not want to install it, use the portable `release\POE Filter Audio Manager 0.1.0.exe` instead. 
 
 3. Paste the folder path that contains your POE filter audio files, for example:
 
