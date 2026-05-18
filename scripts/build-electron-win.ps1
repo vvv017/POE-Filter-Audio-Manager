@@ -12,7 +12,7 @@ if (-not (Test-Path -LiteralPath $builder)) {
 New-Item -ItemType Directory -Force -Path $env:ELECTRON_CACHE | Out-Null
 New-Item -ItemType Directory -Force -Path $env:ELECTRON_BUILDER_CACHE | Out-Null
 
-& $builder --win portable
+& $builder --win
 if ($LASTEXITCODE -ne 0) {
-  throw "Electron Windows build failed."
+  throw "Electron Windows builds failed."
 }

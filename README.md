@@ -27,7 +27,7 @@
    npm run desktop
    ```
 
-   Windows 桌面打包版可直接雙擊 `release\POE Filter Audio Manager 0.1.0.exe`。它是 Electron 桌面程式，不會開啟瀏覽器分頁，也不會顯示命令列黑框。
+   Windows 桌面打包版建議使用 `release\POE Filter Audio Manager Setup 0.1.0.exe` 走標準安裝精靈後啟動；如果不想安裝，也可以使用 `release\POE Filter Audio Manager 0.1.0.exe` 可攜版。它們都是 Electron 桌面程式，不會開啟瀏覽器分頁，也不會顯示命令列黑框。
 
 3. 貼上 POE 過濾器音效所在資料夾，例如：
 
@@ -61,19 +61,24 @@
    npm.cmd install --cache .\.npm-cache
    ```
 
-2. 建立 Windows exe：
+2. 建立 Windows 安裝版與可攜版：
 
    ```powershell
    npm run build:win
    ```
 
-3. 產物會在：
+3. 主要產物會在：
 
    ```text
+   release\POE Filter Audio Manager Setup 0.1.0.exe
    release\POE Filter Audio Manager 0.1.0.exe
    ```
 
-   這個是可攜式 Electron exe，可以直接給 Windows 使用者執行。
+   推薦一般使用者下載 `POE Filter Audio Manager Setup 0.1.0.exe`。安裝版會顯示標準安裝精靈，包含 MIT License、安裝範圍、安裝資料夾選擇、安裝進度，以及完成後啟動選項。安裝版只在安裝時解包，之後從開始選單或桌面捷徑啟動會比可攜版快。
+
+   `POE Filter Audio Manager 0.1.0.exe` 是可攜式 Electron exe，不用安裝就能執行，但每次啟動可能比較慢。
+
+   安裝器使用 `license.txt` 中的 MIT License。
 
    桌面版會使用 `assets\app-icon.ico` 作為 Windows icon，並在視窗縮小時自動等比縮放介面，避免出現外層頁面捲軸。
 
@@ -112,7 +117,7 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    npm run desktop
    ```
 
-   In the Windows desktop package, double-click `release\POE Filter Audio Manager 0.1.0.exe`. It is an Electron desktop app, so it does not open a browser tab or show a command-line window.
+   For the packaged Windows desktop app, prefer `release\POE Filter Audio Manager Setup 0.1.0.exe` and launch the installed app afterward. The setup uses a standard installer wizard. If you do not want to install it, use the portable `release\POE Filter Audio Manager 0.1.0.exe` instead. Both are Electron desktop apps, so they do not open a browser tab or show a command-line window.
 
 3. Paste the folder path that contains your POE filter audio files, for example:
 
@@ -146,19 +151,24 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    npm.cmd install --cache .\.npm-cache
    ```
 
-2. Build the Windows exe:
+2. Build the Windows installer and portable exe:
 
    ```powershell
    npm run build:win
    ```
 
-3. The output is created at:
+3. The main outputs are created at:
 
    ```text
+   release\POE Filter Audio Manager Setup 0.1.0.exe
    release\POE Filter Audio Manager 0.1.0.exe
    ```
 
-   This is a portable Electron exe that Windows users can run directly.
+   `POE Filter Audio Manager Setup 0.1.0.exe` is recommended for most users. The installer shows a standard wizard with the MIT License, install scope, install folder selection, install progress, and a launch-after-finish option. It extracts the app during installation, so normal launches from the Start menu or desktop shortcut are faster.
+
+   `POE Filter Audio Manager 0.1.0.exe` is the portable Electron exe. It can run without installation, but startup may be slower because it has to prepare the app at launch.
+
+   The installer displays the MIT License from `license.txt`.
 
    The desktop app uses `assets\app-icon.ico` as its Windows icon and automatically scales the interface down when the window is smaller, avoiding an outer page scrollbar.
 

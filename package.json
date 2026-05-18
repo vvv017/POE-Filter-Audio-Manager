@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A desktop manager for Path of Exile filter audio files.",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -13,7 +14,11 @@
   "build": {
     "appId": "com.local.poefilteraudiomanager",
     "productName": "POE Filter Audio Manager",
-    "asar": false,
+    "asar": true,
+    "electronLanguages": [
+      "en-US",
+      "zh-TW"
+    ],
     "directories": {
       "output": "release"
     },
@@ -23,11 +28,18 @@
       "public/**/*",
       "server.js",
       "package.json",
+      "license.txt",
       "README.md"
     ],
     "win": {
       "icon": "assets/app-icon.ico",
       "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
         {
           "target": "portable",
           "arch": [
@@ -35,6 +47,13 @@
           ]
         }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "license": "license.txt"
     }
   },
   "devDependencies": {
