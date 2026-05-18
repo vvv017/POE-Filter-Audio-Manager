@@ -7,8 +7,6 @@ dist/
 release/
 release-desktop/
 release-updated/
-tools/launcher/bin/
-tools/launcher/obj/
 
 # Local test fixtures
 sample-audio/

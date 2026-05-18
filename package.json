@@ -8,8 +8,7 @@
   "scripts": {
     "start": "node server.js",
     "desktop": "electron .",
-    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build-electron-win.ps1",
-    "build:launcher": "powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1"
+    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build-electron-win.ps1"
   },
   "build": {
     "appId": "com.local.poefilteraudiomanager",
