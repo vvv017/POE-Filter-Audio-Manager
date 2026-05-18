@@ -27,6 +27,8 @@ export function applyLanguage() {
   document.querySelector(".volume-control")?.setAttribute("aria-label", t("previewVolume"));
   document.querySelector(".folder-strip")?.setAttribute("aria-label", t("folderSettings"));
   els.folderInput.placeholder = t("folderPlaceholder");
+  els.browseFolderButton.title = t("browseFolder");
+  els.browseFolderButton.setAttribute("aria-label", t("browseFolder"));
   els.loadButton.textContent = t("load");
   els.reloadButton.title = t("refresh");
   els.reloadButton.setAttribute("aria-label", t("refresh"));

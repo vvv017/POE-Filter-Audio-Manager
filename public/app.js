@@ -1,4 +1,4 @@
-import { loadDefaults, loadFolder } from "./js/actions.js";
+import { chooseFolder, loadDefaults, loadFolder } from "./js/actions.js";
 import { els, refs, state } from "./js/context.js";
 import { renderDefaultFolders, renderFiles, selectFile, updateSelectedLabels } from "./js/files.js";
 import { applyLanguage, setLanguage } from "./js/language.js";
@@ -36,6 +36,7 @@ Object.assign(refs, {
 
 els.folderInput.value = state.dir;
 els.languageToggle.addEventListener("click", () => setLanguage(state.lang === "zh" ? "en" : "zh"));
+els.browseFolderButton.addEventListener("click", chooseFolder);
 els.loadButton.addEventListener("click", loadFolder);
 els.reloadButton.addEventListener("click", () => {
   if (state.dir) loadFolder();
@@ -70,6 +71,10 @@ renderRules();
 renderFiles();
 setPreviewVolume(state.volume);
 applyLanguage();
+if (!window.poeDesktop?.chooseFolder) {
+  els.browseFolderButton.hidden = true;
+  document.querySelector(".folder-strip")?.classList.add("no-folder-picker");
+}
 loadDefaults();
 
 if (state.dir) {

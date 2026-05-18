@@ -30,6 +30,13 @@ body {
   letter-spacing: 0;
 }
 
+html.desktop-app,
+html.desktop-app body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 button,
 input,
 select {
@@ -152,7 +159,7 @@ button:focus-visible {
 
 .folder-strip {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) 104px;
+  grid-template-columns: 96px minmax(0, 1fr) 44px 104px;
   gap: 10px;
   align-items: center;
   padding: 12px;
@@ -166,6 +173,16 @@ button:focus-visible {
 .rename-form label {
   color: var(--muted);
   font-size: 13px;
+}
+
+.folder-strip.no-folder-picker {
+  grid-template-columns: 96px minmax(0, 1fr) 104px;
+}
+
+.browse-folder-button {
+  min-width: 44px;
+  padding: 0;
+  font-weight: 700;
 }
 
 .folder-suggestions {
@@ -596,6 +613,51 @@ tbody tr.selected {
   color: var(--muted);
   padding: 28px 12px;
   text-align: center;
+}
+
+html.desktop-app .app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
+html.desktop-app .workspace {
+  flex: 1;
+  min-height: 0;
+}
+
+html.desktop-app .rule-panel,
+html.desktop-app .file-panel,
+html.desktop-app .inspector {
+  min-height: 0;
+  max-height: 100%;
+}
+
+html.desktop-app .rule-panel,
+html.desktop-app .file-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+html.desktop-app .preset-grid,
+html.desktop-app .inspector {
+  overflow: auto;
+}
+
+html.desktop-app .preset-grid {
+  flex: 1;
+}
+
+html.desktop-app .preset-grid,
+html.desktop-app .table-wrap {
+  min-height: 0;
+}
+
+html.desktop-app .table-wrap {
+  flex: 1;
+  max-height: none;
 }
 
 @media (max-width: 1120px) {

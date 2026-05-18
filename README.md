@@ -15,17 +15,27 @@
    npm start
    ```
 
-2. 打開瀏覽器進入：
+2. 開發時可以用瀏覽器進入：
 
    ```text
    http://localhost:5173
    ```
+
+   或直接啟動桌面視窗：
+
+   ```powershell
+   npm run desktop
+   ```
+
+   Windows 桌面打包版可直接雙擊 `release\POE Filter Audio Manager 0.1.0.exe`。它是 Electron 桌面程式，不會開啟瀏覽器分頁，也不會顯示命令列黑框。
 
 3. 貼上 POE 過濾器音效所在資料夾，例如：
 
    ```text
    C:\Users\你的名字\Documents\My Games\Path of Exile
    ```
+
+   桌面版也可以按路徑欄旁邊的 `...` 直接選擇資料夾。
 
 4. 檔案列表每個檔名右邊都有播放按鈕，可以直接試聽。
 5. 選擇音效後，可從右側下拉選單選目標規則並套用改名。
@@ -42,6 +52,30 @@
 ### 支援音效格式
 
 `mp3`、`wav`、`ogg`、`flac`、`m4a`、`aac`
+
+### 打包 Windows 桌面版
+
+1. 安裝依賴：
+
+   ```powershell
+   npm.cmd install --cache .\.npm-cache
+   ```
+
+2. 建立 Windows exe：
+
+   ```powershell
+   npm run build:win
+   ```
+
+3. 產物會在：
+
+   ```text
+   release\POE Filter Audio Manager 0.1.0.exe
+   ```
+
+   這個是可攜式 Electron exe，可以直接給 Windows 使用者執行。
+
+   桌面版會使用 `assets\app-icon.ico` 作為 Windows icon，並在視窗縮小時自動等比縮放介面，避免出現外層頁面捲軸。
 
 ### 前端結構
 
@@ -66,17 +100,27 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    npm start
    ```
 
-2. Open the app in your browser:
+2. During development, open the app in your browser:
 
    ```text
    http://localhost:5173
    ```
+
+   Or start the desktop window directly:
+
+   ```powershell
+   npm run desktop
+   ```
+
+   In the Windows desktop package, double-click `release\POE Filter Audio Manager 0.1.0.exe`. It is an Electron desktop app, so it does not open a browser tab or show a command-line window.
 
 3. Paste the folder path that contains your POE filter audio files, for example:
 
    ```text
    C:\Users\YourName\Documents\My Games\Path of Exile
    ```
+
+   In the desktop app, you can also press `...` beside the path field to choose the folder directly.
 
 4. Use the play button beside each file name to preview audio directly.
 5. Select an audio file, choose a target rule from the right-side dropdown, then apply the rename.
@@ -93,6 +137,30 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
 ### Supported Audio Formats
 
 `mp3`, `wav`, `ogg`, `flac`, `m4a`, `aac`
+
+### Build The Windows Desktop App
+
+1. Install dependencies:
+
+   ```powershell
+   npm.cmd install --cache .\.npm-cache
+   ```
+
+2. Build the Windows exe:
+
+   ```powershell
+   npm run build:win
+   ```
+
+3. The output is created at:
+
+   ```text
+   release\POE Filter Audio Manager 0.1.0.exe
+   ```
+
+   This is a portable Electron exe that Windows users can run directly.
+
+   The desktop app uses `assets\app-icon.ico` as its Windows icon and automatically scales the interface down when the window is smaller, avoiding an outer page scrollbar.
 
 ### Frontend Structure
 

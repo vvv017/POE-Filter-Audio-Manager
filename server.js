@@ -4,12 +4,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const PORT = Number(process.env.PORT || 5173);
+const DEFAULT_PORT = Number(process.env.PORT || cliPort() || 5173);
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, "public");
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]);
+
+function cliPort() {
+  const portArg = process.argv.find(arg => arg.startsWith("--port="));
+  return portArg ? portArg.slice("--port=".length) : "";
+}
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -384,20 +389,43 @@ async function handleApi(req, res, url) {
   sendJson(res, 404, { error: "找不到 API。" });
 }
 
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname.startsWith("/api/")) {
-      await handleApi(req, res, url);
-      return;
+export function createAppServer() {
+  return createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      if (url.pathname.startsWith("/api/")) {
+        await handleApi(req, res, url);
+        return;
+      }
+      await serveStatic(req, res, url);
+    } catch (error) {
+      const status = error.status || 500;
+      sendJson(res, status, { error: error.message || "發生未知錯誤。" });
     }
-    await serveStatic(req, res, url);
-  } catch (error) {
-    const status = error.status || 500;
-    sendJson(res, status, { error: error.message || "發生未知錯誤。" });
-  }
-});
+  });
+}
 
-server.listen(PORT, () => {
-  console.log(`POE Filter Audio Manager running at http://localhost:${PORT}`);
-});
+export function startServer({ port = DEFAULT_PORT, host = "127.0.0.1" } = {}) {
+  const server = createAppServer();
+
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => {
+      server.off("error", reject);
+      const address = server.address();
+      const actualPort = typeof address === "object" && address ? address.port : port;
+      const url = `http://${host}:${actualPort}/`;
+      console.log(`POE Filter Audio Manager running at ${url}`);
+      resolve({ server, port: actualPort, url });
+    });
+  });
+}
+
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  return import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+}
+
+if (isMainModule()) {
+  await startServer({ port: DEFAULT_PORT });
+}

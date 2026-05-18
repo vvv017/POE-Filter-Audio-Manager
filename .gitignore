@@ -1,5 +1,14 @@
 # Dependencies
 node_modules/
+.npm-cache/
+.electron-cache/
+.electron-builder-cache/
+dist/
+release/
+release-desktop/
+release-updated/
+tools/launcher/bin/
+tools/launcher/obj/
 
 # Local test fixtures
 sample-audio/

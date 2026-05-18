@@ -18,6 +18,7 @@ export const els = {
   addRuleButton: document.querySelector("#addRuleButton"),
   applyButton: document.querySelector("#applyButton"),
   audioPlayer: document.querySelector("#audioPlayer"),
+  browseFolderButton: document.querySelector("#browseFolderButton"),
   cancelManualRenameButton: document.querySelector("#cancelManualRenameButton"),
   cancelRuleButton: document.querySelector("#cancelRuleButton"),
   clearLogButton: document.querySelector("#clearLogButton"),

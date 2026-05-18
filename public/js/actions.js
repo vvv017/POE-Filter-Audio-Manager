@@ -41,3 +41,22 @@ export async function loadFolder() {
     els.loadButton.disabled = false;
   }
 }
+
+export async function chooseFolder() {
+  if (!window.poeDesktop?.chooseFolder) {
+    pushLog("folderPickerUnavailable");
+    return;
+  }
+
+  try {
+    els.browseFolderButton.disabled = true;
+    const dir = await window.poeDesktop.chooseFolder();
+    if (!dir) return;
+    els.folderInput.value = dir;
+    await loadFolder();
+  } catch (error) {
+    pushLogText(translateServerError(error.message, state.lang) || t("actionFailed"));
+  } finally {
+    els.browseFolderButton.disabled = false;
+  }
+}

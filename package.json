@@ -1,9 +1,45 @@
 {
   "name": "poe-filter-audio-manager",
   "version": "0.1.0",
+  "description": "A desktop manager for Path of Exile filter audio files.",
   "private": true,
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "desktop": "electron .",
+    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build-electron-win.ps1",
+    "build:launcher": "powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1"
+  },
+  "build": {
+    "appId": "com.local.poefilteraudiomanager",
+    "productName": "POE Filter Audio Manager",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "assets/**/*",
+      "electron/**/*",
+      "public/**/*",
+      "server.js",
+      "package.json",
+      "README.md"
+    ],
+    "win": {
+      "icon": "assets/app-icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.1.0",
+    "electron-builder": "^26.8.1"
   }
 }
