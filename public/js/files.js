@@ -1,7 +1,9 @@
 import { apiUrl } from "./api.js";
 import { els, refs, state } from "./context.js";
 import { t } from "./i18n.js";
+import { createLocalAudioUrl } from "./local-files.js";
 import { pushLog } from "./log.js";
+import { hasNativeDesktop, nativeAudioUrl } from "./native.js";
 import { ruleIdForBase } from "./rules.js";
 import { escapeHtml, formatBytes, formatDate, nameWithoutExtension } from "./utils.js";
 
@@ -10,13 +12,21 @@ export function renderDefaultFolders(folders) {
   if (!folders.length) return;
 
   folders.forEach(folder => {
+    const label = typeof folder === "string" ? folder : folder.name;
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = folder;
-    button.title = folder;
-    button.addEventListener("click", () => {
-      els.folderInput.value = folder;
-      refs.loadFolder?.();
+    button.textContent = label;
+    button.title = label;
+    button.addEventListener("click", async () => {
+      if (folder.pick) {
+        els.folderInput.value = label;
+        await refs.chooseFolder?.(folder.pickerId);
+        return;
+      }
+
+      state.dirHandle = folder.handle || null;
+      els.folderInput.value = label;
+      await refs.loadFolder?.();
     });
     els.defaultFolders.append(button);
   });
@@ -56,10 +66,12 @@ export function renderFiles() {
       <td>${formatBytes(file.size)}</td>
       <td>${formatDate(file.modifiedAt, state.lang)}</td>
     `;
-    row.addEventListener("click", () => selectFile(file.name));
+    row.addEventListener("click", () => {
+      void selectFile(file.name);
+    });
     row.querySelector(".row-play-button").addEventListener("click", event => {
       event.stopPropagation();
-      playFile(file.name);
+      void playFile(file.name);
     });
     els.fileTable.append(row);
   });
@@ -70,7 +82,7 @@ export function ruleMarkup(file) {
   return `<span class="rule-pill active">${escapeHtml(file.rule.slot)} · ${escapeHtml(file.rule.key)}</span>`;
 }
 
-export function selectFile(name) {
+export async function selectFile(name) {
   const file = state.files.find(item => item.name === name);
   if (!file) return;
 
@@ -79,9 +91,14 @@ export function selectFile(name) {
   els.editNameButton.disabled = false;
   els.manualExtension.textContent = file.ext;
   els.audioPlayer.pause();
-  els.audioPlayer.removeAttribute("src");
+  clearAudioSource();
   els.audioPlayer.load();
-  els.audioPlayer.src = audioUrl(file);
+  const src = await audioUrl(file);
+  if (state.selected?.name !== name) {
+    if (String(src).startsWith("blob:")) URL.revokeObjectURL(src);
+    return;
+  }
+  els.audioPlayer.src = src;
   els.applyButton.disabled = false;
   updateSelectedLabels();
 
@@ -108,8 +125,8 @@ export function updateSelectedLabels() {
   els.selectionBadge.textContent = state.selected.rule.isRule ? `${state.selected.rule.slot}${state.selected.rule.key}` : t("customAudio");
 }
 
-function playFile(name) {
-  selectFile(name);
+async function playFile(name) {
+  await selectFile(name);
   els.audioPlayer.volume = state.volume;
   els.audioPlayer.currentTime = 0;
   const playPromise = els.audioPlayer.play();
@@ -120,10 +137,27 @@ function playFile(name) {
   }
 }
 
-function audioUrl(file) {
+async function audioUrl(file) {
+  if (hasNativeDesktop()) {
+    return nativeAudioUrl(state.dir, file.name);
+  }
+
+  if (file.handle) {
+    state.audioObjectUrl = await createLocalAudioUrl(file);
+    return state.audioObjectUrl;
+  }
+
   return apiUrl("/api/audio", {
     dir: state.dir,
     file: file.name,
     v: `${state.audioRevision}-${file.modifiedAt}-${file.size}`
   });
+}
+
+function clearAudioSource() {
+  if (state.audioObjectUrl) {
+    URL.revokeObjectURL(state.audioObjectUrl);
+    state.audioObjectUrl = "";
+  }
+  els.audioPlayer.removeAttribute("src");
 }

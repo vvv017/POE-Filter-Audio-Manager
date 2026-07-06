@@ -21,12 +21,13 @@
    http://localhost:5173
    ```
 
-   或直接啟動桌面視窗：
+   或建立輕量桌面版：
 
    ```powershell
-   npm run desktop
+   npm run build:win
    ```
 
+   Windows 桌面版由 Pake/Tauri 包裝，不再使用 Electron。打包產物會放在 `release\`。
 
 3. 貼上 POE 過濾器音效所在資料夾，例如：
 
@@ -34,7 +35,7 @@
    C:\Users\你的名字\Documents\My Games\Path of Exile
    ```
 
-   桌面版也可以按路徑欄旁邊的 `...` 直接選擇資料夾。
+   Pake 桌面版可以按路徑欄旁邊的 `...` 選擇資料夾，也可以使用下方預設資料夾按鈕或手動貼上路徑。桌面版透過 Tauri 原生命令讀寫音效檔，不會跳出 Chromium 檔案權限提示。
 
 4. 檔案列表每個檔名右邊都有播放按鈕，可以直接試聽。
 5. 選擇音效後，可從右側下拉選單選目標規則並套用改名。
@@ -52,6 +53,31 @@
 
 `mp3`、`wav`、`ogg`、`flac`、`m4a`、`aac`
 
+### 打包 Windows 桌面版
+
+1. 安裝依賴：
+
+   ```powershell
+   npm.cmd install --cache .\.npm-cache
+   ```
+
+2. 建立 Windows 安裝版與可攜版：
+
+   ```powershell
+   npm run build:win
+   ```
+
+   Pake 首次打包需要 Rust 1.85+ 工具鏈；如果本機沒有 Rust，Pake 會提示安裝或需要你先安裝 Rust。
+
+3. 主要產物會在 `release\`。腳本會使用：
+
+   ```text
+   public\index.html
+   assets\app-icon.ico
+   ```
+
+   桌面版使用 `assets\app-icon.ico` 作為 Windows icon，並在視窗縮小時自動等比縮放介面，避免出現外層頁面捲軸。
+
 ### 前端結構
 
 - `public/app.js`：入口、事件綁定、初始化。
@@ -61,6 +87,8 @@
 - `public/js/rules.js`：規則新增、編輯、刪除與目標規則選單。
 - `public/js/inspector.js`：右側操作區、規則改名、手動改名。
 - `public/js/actions.js`：載入資料夾與預設資料夾。
+- `public/js/native.js`：Pake/Tauri 桌面版原生檔案命令橋接。
+- `public/js/local-files.js`：非 Tauri 瀏覽器 fallback 的本地資料夾授權、掃描、播放與改名。
 - `public/js/log.js`、`public/js/api.js`、`public/js/storage.js`、`public/js/utils.js`、`public/js/volume.js`：共用輔助模組。
 
 ## English
@@ -81,12 +109,13 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    http://localhost:5173
    ```
 
-   Or start the desktop window directly:
+   Or build the lightweight desktop app:
 
    ```powershell
-   npm run desktop
+   npm run build:win
    ```
 
+   The Windows desktop app is packaged by Pake/Tauri and no longer uses Electron. Build outputs are written to `release\`.
 
 3. Paste the folder path that contains your POE filter audio files, for example:
 
@@ -94,7 +123,7 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
    C:\Users\YourName\Documents\My Games\Path of Exile
    ```
 
-   In the desktop app, you can also press `...` beside the path field to choose the folder directly.
+   In the Pake desktop app, press `...` beside the path field, use the default folder buttons below it, or paste a path manually. The desktop app reads and writes audio files through native Tauri commands, so Chromium file permission prompts are not shown.
 
 4. Use the play button beside each file name to preview audio directly.
 5. Select an audio file, choose a target rule from the right-side dropdown, then apply the rename.
@@ -112,6 +141,30 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
 
 `mp3`, `wav`, `ogg`, `flac`, `m4a`, `aac`
 
+### Build The Windows Desktop App
+
+1. Install dependencies:
+
+   ```powershell
+   npm.cmd install --cache .\.npm-cache
+   ```
+
+2. Build the Windows installer and portable exe:
+
+   ```powershell
+   npm run build:win
+   ```
+
+   The first Pake build requires the Rust 1.85+ toolchain. If Rust is missing, Pake will prompt for installation or you can install Rust first.
+
+3. The main outputs are created under `release\`. The script packages:
+
+   ```text
+   public\index.html
+   assets\app-icon.ico
+   ```
+
+   The desktop app uses `assets\app-icon.ico` as its Windows icon and automatically scales the interface down when the window is smaller, avoiding an outer page scrollbar.
 
 ### Frontend Structure
 
@@ -122,4 +175,6 @@ A local Path of Exile filter audio manager. It manages audio files in a selected
 - `public/js/rules.js`: add, edit, delete rules and target-rule options.
 - `public/js/inspector.js`: right-side action panel, rule rename, manual rename.
 - `public/js/actions.js`: folder loading and default folders.
+- `public/js/native.js`: native file-command bridge for the Pake/Tauri desktop app.
+- `public/js/local-files.js`: non-Tauri browser fallback for folder permission, scanning, playback, and rename operations.
 - `public/js/log.js`, `public/js/api.js`, `public/js/storage.js`, `public/js/utils.js`, `public/js/volume.js`: shared helper modules.

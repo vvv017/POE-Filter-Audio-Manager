@@ -2,6 +2,8 @@ import { chooseFolder, loadDefaults, loadFolder } from "./js/actions.js";
 import { els, refs, state } from "./js/context.js";
 import { renderDefaultFolders, renderFiles, selectFile, updateSelectedLabels } from "./js/files.js";
 import { applyLanguage, setLanguage } from "./js/language.js";
+import { hasLocalFolderAccess } from "./js/local-files.js";
+import { hasNativeDesktop } from "./js/native.js";
 import { renderLog } from "./js/log.js";
 import {
   applyManualRename,
@@ -21,6 +23,7 @@ import {
 import { setPreviewVolume } from "./js/volume.js";
 
 Object.assign(refs, {
+  chooseFolder,
   closeManualRename,
   loadFolder,
   renderDefaultFolders,
@@ -34,6 +37,7 @@ Object.assign(refs, {
   updateSelectedLabels
 });
 
+document.documentElement.classList.add("desktop-app");
 els.folderInput.value = state.dir;
 els.languageToggle.addEventListener("click", () => setLanguage(state.lang === "zh" ? "en" : "zh"));
 els.browseFolderButton.addEventListener("click", chooseFolder);
@@ -71,12 +75,12 @@ renderRules();
 renderFiles();
 setPreviewVolume(state.volume);
 applyLanguage();
-if (!window.poeDesktop?.chooseFolder) {
+if (!hasNativeDesktop() && !hasLocalFolderAccess()) {
   els.browseFolderButton.hidden = true;
   document.querySelector(".folder-strip")?.classList.add("no-folder-picker");
 }
 loadDefaults();
 
-if (state.dir) {
+if (state.dir && (hasNativeDesktop() || !hasLocalFolderAccess())) {
   loadFolder();
 }

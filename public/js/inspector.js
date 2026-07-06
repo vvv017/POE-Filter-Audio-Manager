@@ -1,7 +1,9 @@
 import { requestJson } from "./api.js";
 import { els, refs, state } from "./context.js";
 import { t } from "./i18n.js";
+import { listLocalAudioFiles, renameLocalAudio } from "./local-files.js";
 import { pushLogText, pushRenameLog } from "./log.js";
+import { hasNativeDesktop, nativeRenameAudio } from "./native.js";
 import { selectedRuleBase } from "./rules.js";
 import { nameWithoutExtension, translateServerError } from "./utils.js";
 
@@ -109,16 +111,7 @@ export async function applyRename() {
 
   try {
     els.applyButton.disabled = true;
-    const payload = await requestJson("/api/rename", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        dir: state.dir,
-        source: state.selected.name,
-        strategy: els.strategySelect.value,
-        targetBase: selectedRuleBase()
-      })
-    });
+    const payload = await renameAudio(selectedRuleBase());
 
     state.files = payload.files;
     state.audioRevision = Date.now();
@@ -127,7 +120,7 @@ export async function applyRename() {
     pushRenameLog(payload.result);
 
     if (state.selected) {
-      refs.selectFile?.(state.selected.name);
+      await refs.selectFile?.(state.selected.name);
     } else {
       refs.renderFiles?.();
       updateConflictStatus();
@@ -144,16 +137,7 @@ export async function applyManualRename(event) {
 
   try {
     els.manualRenameButton.disabled = true;
-    const payload = await requestJson("/api/rename", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        dir: state.dir,
-        source: state.selected.name,
-        strategy: els.strategySelect.value,
-        targetBase: els.manualNameInput.value.trim()
-      })
-    });
+    const payload = await renameAudio(els.manualNameInput.value.trim());
 
     state.files = payload.files;
     state.audioRevision = Date.now();
@@ -163,7 +147,7 @@ export async function applyManualRename(event) {
 
     if (state.selected) {
       closeManualRename();
-      refs.selectFile?.(state.selected.name);
+      await refs.selectFile?.(state.selected.name);
     } else {
       refs.renderFiles?.();
       updateConflictStatus();
@@ -179,6 +163,41 @@ function matchingManualTarget() {
   const target = manualTargetFileName();
   if (!target) return null;
   return state.files.find(file => file.name.toLowerCase() === target.toLowerCase()) || null;
+}
+
+async function renameAudio(targetBase) {
+  if (hasNativeDesktop()) {
+    return nativeRenameAudio({
+      dir: state.dir,
+      source: state.selected.name,
+      strategy: els.strategySelect.value,
+      targetBase
+    });
+  }
+
+  if (state.dirHandle) {
+    const result = await renameLocalAudio({
+      dirHandle: state.dirHandle,
+      source: state.selected.name,
+      strategy: els.strategySelect.value,
+      targetBase
+    });
+    return {
+      result,
+      files: await listLocalAudioFiles(state.dirHandle)
+    };
+  }
+
+  return requestJson("/api/rename", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      dir: state.dir,
+      source: state.selected.name,
+      strategy: els.strategySelect.value,
+      targetBase
+    })
+  });
 }
 
 function matchingTarget() {

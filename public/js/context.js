@@ -2,8 +2,10 @@ import { STORAGE_KEYS } from "./constants.js";
 import { loadLanguage, loadRules, loadVolume } from "./storage.js";
 
 export const state = {
+  audioObjectUrl: "",
   audioRevision: Date.now(),
   dir: localStorage.getItem(STORAGE_KEYS.dir) || "",
+  dirHandle: null,
   editingRuleId: null,
   files: [],
   lang: loadLanguage(),
