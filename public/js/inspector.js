@@ -10,6 +10,8 @@ import { nameWithoutExtension, translateServerError } from "./utils.js";
 export function updateConflictStatus() {
   const target = targetFileName();
   els.conflictStatus.className = "status-line";
+  updateSwapRenameFields(false);
+  updateTargetPlayButton();
   refs.renderRules?.();
 
   if (!state.selected) {
@@ -45,7 +47,13 @@ export function updateConflictStatus() {
     return;
   }
 
-  showConflictMessage(els.conflictStatus, target);
+  showConflictMessage(els.conflictStatus, target, els.applyButton);
+}
+
+export function playTargetFile() {
+  const existing = matchingTarget();
+  if (!existing) return;
+  void refs.playFile?.(existing.name, { select: false });
 }
 
 export function openManualRename() {
@@ -103,7 +111,7 @@ export function updateManualRenameStatus() {
     return;
   }
 
-  showConflictMessage(els.manualNameStatus, target);
+  showConflictMessage(els.manualNameStatus, target, els.manualRenameButton);
 }
 
 export async function applyRename() {
@@ -171,6 +179,7 @@ async function renameAudio(targetBase) {
       dir: state.dir,
       source: state.selected.name,
       strategy: els.strategySelect.value,
+      swapRenameBase: els.swapRenameInput.value.trim(),
       targetBase
     });
   }
@@ -180,6 +189,7 @@ async function renameAudio(targetBase) {
       dirHandle: state.dirHandle,
       source: state.selected.name,
       strategy: els.strategySelect.value,
+      swapRenameBase: els.swapRenameInput.value.trim(),
       targetBase
     });
     return {
@@ -195,6 +205,7 @@ async function renameAudio(targetBase) {
       dir: state.dir,
       source: state.selected.name,
       strategy: els.strategySelect.value,
+      swapRenameBase: els.swapRenameInput.value.trim(),
       targetBase
     })
   });
@@ -215,9 +226,36 @@ function manualTargetFileName() {
   return `${cleanBase}${state.selected.ext}`;
 }
 
-function showConflictMessage(element, target) {
+function showConflictMessage(element, target, button) {
   if (els.strategySelect.value === "swap") {
     element.textContent = t("targetExistsSwap", { target });
+    element.classList.add("warn");
+    return;
+  }
+
+  if (els.strategySelect.value === "swap-rename") {
+    updateSwapRenameFields(true);
+    const swapTarget = swapRenameTargetFileName();
+    if (!swapTarget) {
+      element.textContent = t("swapRenameRequired");
+      element.classList.add("error");
+      button.disabled = true;
+      return;
+    }
+    if (swapTarget.toLowerCase() === target.toLowerCase()) {
+      element.textContent = t("swapRenameSameAsTarget");
+      element.classList.add("error");
+      button.disabled = true;
+      return;
+    }
+    const existing = state.files.find(file => file.name.toLowerCase() === swapTarget.toLowerCase());
+    if (existing && existing.name !== state.selected.name) {
+      element.textContent = t("swapRenameNameExists", { target: swapTarget });
+      element.classList.add("error");
+      button.disabled = true;
+      return;
+    }
+    element.textContent = t("targetExistsSwapRename", { target, swapTarget });
     element.classList.add("warn");
     return;
   }
@@ -236,4 +274,23 @@ function targetFileName() {
   const base = selectedRuleBase();
   if (!base || !state.selected) return "";
   return `${base}${state.selected.ext}`;
+}
+
+function swapRenameTargetFileName() {
+  const base = els.swapRenameInput.value.trim();
+  if (!base || !state.selected) return "";
+  const cleanBase = base.toLowerCase().endsWith(state.selected.ext.toLowerCase())
+    ? base.slice(0, -state.selected.ext.length)
+    : base;
+  return `${cleanBase}${state.selected.ext}`;
+}
+
+function updateSwapRenameFields(show) {
+  els.swapRenameFields.hidden = !show;
+  if (state.selected) els.swapRenameExtension.textContent = state.selected.ext;
+}
+
+function updateTargetPlayButton() {
+  const existing = matchingTarget();
+  els.targetPlayButton.disabled = !existing;
 }

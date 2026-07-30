@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { createReadStream } from "node:fs";
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -171,7 +172,7 @@ async function tempName(dir, ext) {
   throw createHttpError(500, "無法建立暫存檔名。");
 }
 
-async function renameAudio({ dir, source, targetBase, strategy }) {
+async function renameAudio({ dir, source, targetBase, strategy, swapRenameBase }) {
   await ensureDirectory(dir);
   assertAudioFileName(source);
 
@@ -260,7 +261,175 @@ async function renameAudio({ dir, source, targetBase, strategy }) {
     };
   }
 
-  throw createHttpError(409, "目標檔名已存在。請選擇交換名字或舊檔加後綴。");
+  if (strategy === "swap-rename") {
+    return swapAndRename({
+      dir,
+      requestedTarget,
+      source,
+      sourceExt,
+      sourcePath,
+      swapRenameBase
+    });
+  }
+
+  throw createHttpError(409, "目標檔名已存在。請選擇交換名字、交換並改名或舊檔加後綴。");
+}
+
+async function swapAndRename({ dir, source, requestedTarget, sourceExt, sourcePath, swapRenameBase }) {
+  const cleanSwapBase = cleanTargetBase(swapRenameBase);
+  const displacedTarget = `${cleanSwapBase}${sourceExt}`;
+  assertAudioFileName(displacedTarget);
+  if (displacedTarget.toLowerCase() === requestedTarget.toLowerCase()) {
+    throw createHttpError(400, "被交換檔名不能等於目標檔名。");
+  }
+  if (displacedTarget.toLowerCase() !== source.toLowerCase() && (await exists(safePath(dir, displacedTarget)))) {
+    throw createHttpError(409, "被交換檔名已存在。");
+  }
+
+  const temp = await tempName(dir, sourceExt);
+  const targetPath = safePath(dir, requestedTarget);
+  const displacedPath = safePath(dir, displacedTarget);
+  let targetMoved = false;
+
+  await fs.rename(sourcePath, temp.fullPath);
+  try {
+    await fs.rename(targetPath, displacedPath);
+    targetMoved = true;
+    await fs.rename(temp.fullPath, targetPath);
+  } catch (error) {
+    if (targetMoved && (await exists(displacedPath)) && !(await exists(targetPath))) {
+      await fs.rename(displacedPath, targetPath).catch(() => {});
+    }
+    if (await exists(temp.fullPath)) {
+      await fs.rename(temp.fullPath, sourcePath).catch(() => {});
+    }
+    throw error;
+  }
+
+  return {
+    action: "swapped-renamed",
+    source,
+    target: requestedTarget,
+    displacedTarget,
+    message: `${source} 已改成 ${requestedTarget}，原本的 ${requestedTarget} 已改成 ${displacedTarget}。`
+  };
+}
+
+async function packageZip({ dir, files, packageBase }) {
+  await ensureDirectory(dir);
+  if (!Array.isArray(files) || !files.length) {
+    throw createHttpError(400, "請先選擇要打包的音效。");
+  }
+
+  const cleanBase = cleanPackageBase(packageBase);
+  const target = await uniqueZipName(dir, cleanBase);
+  const targetPath = safeZipPath(dir, target);
+  const stage = path.join(dir, `.poe-audio-package-${process.pid}-${Date.now()}`);
+
+  await fs.mkdir(stage);
+  try {
+    for (const file of files) {
+      assertAudioFileName(file);
+      const sourcePath = safePath(dir, file);
+      const stat = await fs.stat(sourcePath).catch(() => null);
+      if (!stat?.isFile()) {
+        throw createHttpError(404, `${file} 不存在。`);
+      }
+      await fs.copyFile(sourcePath, path.join(stage, file));
+    }
+
+    try {
+      await compressDirectory(stage, targetPath);
+    } catch (error) {
+      await fs.rm(targetPath, { force: true }).catch(() => {});
+      throw error;
+    }
+  } finally {
+    await fs.rm(stage, { recursive: true, force: true }).catch(() => {});
+  }
+
+  return { target, count: files.length, message: `已建立 ${target}，包含 ${files.length} 個音效。` };
+}
+
+function cleanPackageBase(input) {
+  if (!input || typeof input !== "string") {
+    throw createHttpError(400, "請輸入 ZIP 名稱。");
+  }
+
+  let base = input.trim();
+  if (base.toLowerCase().endsWith(".zip")) base = base.slice(0, -4);
+  base = base.replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/[. ]+$/g, "").trim();
+  if (!base) {
+    throw createHttpError(400, "ZIP 名稱無效。");
+  }
+  return base;
+}
+
+function safeZipPath(dir, fileName) {
+  if (!fileName || fileName !== path.basename(fileName) || path.extname(fileName).toLowerCase() !== ".zip") {
+    throw createHttpError(400, "ZIP 檔名無效。");
+  }
+  return path.resolve(dir, fileName);
+}
+
+async function uniqueZipName(dir, base) {
+  let index = 2;
+  let candidate = `${base}.zip`;
+  while (await exists(safeZipPath(dir, candidate))) {
+    candidate = `${base}_${index}.zip`;
+    index += 1;
+  }
+  return candidate;
+}
+
+function compressDirectory(stage, targetPath) {
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Compress-Archive -Path $env:POE_ZIP_SOURCE -DestinationPath $env:POE_ZIP_TARGET -Force"
+    ], {
+      env: {
+        ...process.env,
+        POE_ZIP_SOURCE: path.join(stage, "*"),
+        POE_ZIP_TARGET: targetPath
+      },
+      windowsHide: true
+    });
+
+    let stderr = "";
+    child.stderr.on("data", chunk => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", code => {
+      code === 0 ? resolve() : reject(createHttpError(500, stderr.trim() || "建立 ZIP 失敗。"));
+    });
+  });
+}
+
+async function openFolder({ dir, file }) {
+  await ensureDirectory(dir);
+  const args = [];
+  if (file) {
+    const targetPath = safeZipPath(dir, file);
+    if (!(await exists(targetPath))) {
+      throw createHttpError(404, "找不到 ZIP。");
+    }
+    args.push(`/select,${targetPath}`);
+  } else {
+    args.push(dir);
+  }
+
+  await new Promise((resolve, reject) => {
+    const child = spawn("explorer.exe", args, { detached: true, stdio: "ignore", windowsHide: true });
+    child.once("error", reject);
+    child.once("spawn", () => {
+      child.unref();
+      resolve();
+    });
+  });
 }
 
 async function readBody(req) {
@@ -379,10 +548,32 @@ async function handleApi(req, res, url) {
       dir: normalizeDir(body.dir),
       source: body.source,
       targetBase: body.targetBase,
-      strategy: body.strategy || "fail"
+      strategy: body.strategy || "fail",
+      swapRenameBase: body.swapRenameBase
     });
     const files = await listAudioFiles(normalizeDir(body.dir));
     sendJson(res, 200, { result, files });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/package-zip") {
+    const body = await readBody(req);
+    const result = await packageZip({
+      dir: normalizeDir(body.dir),
+      files: body.files,
+      packageBase: body.packageBase
+    });
+    sendJson(res, 200, { result });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/open-folder") {
+    const body = await readBody(req);
+    await openFolder({
+      dir: normalizeDir(body.dir),
+      file: body.file
+    });
+    sendJson(res, 200, { ok: true });
     return;
   }
 

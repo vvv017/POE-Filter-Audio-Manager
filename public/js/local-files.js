@@ -82,7 +82,7 @@ export async function createLocalAudioUrl(file) {
   return URL.createObjectURL(blob);
 }
 
-export async function renameLocalAudio({ dirHandle, source, targetBase, strategy }) {
+export async function renameLocalAudio({ dirHandle, source, targetBase, strategy, swapRenameBase }) {
   await ensurePermission(dirHandle, "readwrite");
   assertAudioFileName(source);
 
@@ -125,7 +125,11 @@ export async function renameLocalAudio({ dirHandle, source, targetBase, strategy
     return swapNames(dirHandle, source, requestedTarget, sourceExt);
   }
 
-  throw new Error("目標檔名已存在。請選擇交換名字或舊檔加後綴。");
+  if (strategy === "swap-rename") {
+    return swapAndRename(dirHandle, source, requestedTarget, sourceExt, swapRenameBase);
+  }
+
+  throw new Error("目標檔名已存在。請選擇交換名字、交換並改名或舊檔加後綴。");
 }
 
 export function cleanTargetBase(input) {
@@ -260,6 +264,40 @@ async function swapNames(dirHandle, source, requestedTarget, sourceExt) {
     target: requestedTarget,
     swappedWith: source,
     message: `${source} 和 ${requestedTarget} 已交換名字。`
+  };
+}
+
+async function swapAndRename(dirHandle, source, requestedTarget, sourceExt, swapRenameBase) {
+  const cleanSwapBase = cleanTargetBase(swapRenameBase);
+  const displacedTarget = `${cleanSwapBase}${sourceExt}`;
+  assertAudioFileName(displacedTarget);
+  if (displacedTarget.toLowerCase() === requestedTarget.toLowerCase()) {
+    throw new Error("被交換檔名不能等於目標檔名。");
+  }
+  if (displacedTarget.toLowerCase() !== source.toLowerCase() && (await hasFile(dirHandle, displacedTarget))) {
+    throw new Error("被交換檔名已存在。");
+  }
+
+  const temp = await tempName(dirHandle, sourceExt);
+  let targetMoved = false;
+
+  try {
+    await moveFile(dirHandle, source, temp);
+    await moveFile(dirHandle, requestedTarget, displacedTarget);
+    targetMoved = true;
+    await moveFile(dirHandle, temp, requestedTarget);
+  } catch (error) {
+    if (targetMoved) await restoreFile(dirHandle, displacedTarget, requestedTarget);
+    await restoreFile(dirHandle, temp, source);
+    throw error;
+  }
+
+  return {
+    action: "swapped-renamed",
+    source,
+    target: requestedTarget,
+    displacedTarget,
+    message: `${source} 已改成 ${requestedTarget}，原本的 ${requestedTarget} 已改成 ${displacedTarget}。`
   };
 }
 

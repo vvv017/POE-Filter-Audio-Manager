@@ -23,6 +23,7 @@ export function applyLanguage() {
   setLabelFor("manualNameInput", t("manualFileName"));
   setLabelFor("targetRule", t("targetFileName"));
   setLabelFor("strategySelect", t("conflictStrategy"));
+  setLabelFor("swapRenameInput", t("swapRenameFileName"));
 
   document.querySelector(".volume-control")?.setAttribute("aria-label", t("previewVolume"));
   document.querySelector(".folder-strip")?.setAttribute("aria-label", t("folderSettings"));
@@ -43,22 +44,33 @@ export function applyLanguage() {
   els.cancelRuleButton.textContent = t("cancel");
   els.searchInput.placeholder = t("searchPlaceholder");
   els.ruleFilter.setAttribute("aria-label", t("ruleFilter"));
+  els.packageNameInput.placeholder = t("packageNamePlaceholder");
+  els.packageNameInput.setAttribute("aria-label", t("packageName"));
+  els.packageButton.textContent = t("packageZip");
+  els.openPackageFolderButton.textContent = t("openPackageFolder");
+  els.closePackageStatusButton.textContent = t("closeStatus");
+  els.selectVisibleFiles.title = t("selectVisibleFiles");
+  els.selectVisibleFiles.setAttribute("aria-label", t("selectVisibleFiles"));
   setOptionText(els.ruleFilter, "all", t("allAudio"));
   setOptionText(els.ruleFilter, "rule", t("matchedRule"));
   setOptionText(els.ruleFilter, "free", t("freeRule"));
-  setTableHeader(0, t("fileName"));
-  setTableHeader(1, t("rule"));
-  setTableHeader(2, t("size"));
-  setTableHeader(3, t("modifiedAt"));
+  setTableHeader(1, t("fileName"));
+  setTableHeader(2, t("rule"));
+  setTableHeader(3, t("size"));
+  setTableHeader(4, t("modifiedAt"));
   document.querySelector(".inspector .panel-title span:first-child").textContent = t("actions");
   document.querySelector(".field-label").textContent = t("currentAudio");
   els.editNameButton.title = t("manualEditName");
   els.editNameButton.setAttribute("aria-label", t("manualEditName"));
+  els.targetPlayButton.title = t("targetPlay");
+  els.targetPlayButton.setAttribute("aria-label", t("targetPlay"));
   els.manualNameInput.placeholder = t("manualNamePlaceholder");
+  els.swapRenameInput.placeholder = t("swapRenameNamePlaceholder");
   els.manualRenameButton.textContent = t("manualRename");
   els.cancelManualRenameButton.textContent = t("cancel");
   setOptionText(els.strategySelect, "fail", t("strategyFail"));
   setOptionText(els.strategySelect, "swap", t("strategySwap"));
+  setOptionText(els.strategySelect, "swap-rename", t("strategySwapRename"));
   setOptionText(els.strategySelect, "auto", t("strategyAuto"));
   els.applyButton.textContent = t("applyRename");
   document.querySelector(".activity .panel-title span:first-child").textContent = t("activity");
@@ -76,6 +88,7 @@ export function applyLanguage() {
   refs.renderFiles?.();
   refs.updateConflictStatus?.();
   refs.updateManualRenameStatus?.();
+  refs.updatePackageControls?.();
   refs.renderLog?.();
 }
 

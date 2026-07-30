@@ -35,6 +35,8 @@ export function renderDefaultFolders(folders) {
 export function renderFiles() {
   const search = els.searchInput.value.trim().toLowerCase();
   const filter = els.ruleFilter.value;
+  const knownNames = new Set(state.files.map(file => file.name));
+  state.packageSelection = new Set([...state.packageSelection].filter(name => knownNames.has(name)));
   const files = state.files.filter(file => {
     const matchesSearch = !search || file.name.toLowerCase().includes(search);
     const matchesFilter =
@@ -47,8 +49,10 @@ export function renderFiles() {
   els.fileTable.innerHTML = "";
   if (!files.length) {
     const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="4" class="empty-state">${escapeHtml(t("emptyFiles"))}</td>`;
+    row.innerHTML = `<td colspan="5" class="empty-state">${escapeHtml(t("emptyFiles"))}</td>`;
     els.fileTable.append(row);
+    updateVisibleCheckbox(files);
+    refs.updatePackageControls?.();
     return;
   }
 
@@ -56,6 +60,9 @@ export function renderFiles() {
     const row = document.createElement("tr");
     if (state.selected?.name === file.name) row.classList.add("selected");
     row.innerHTML = `
+      <td class="select-column">
+        <input class="file-package-checkbox" type="checkbox" aria-label="${escapeHtml(t("selectForPackage", { name: file.name }))}" ${state.packageSelection.has(file.name) ? "checked" : ""}>
+      </td>
       <td>
         <div class="file-cell">
           <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
@@ -69,12 +76,24 @@ export function renderFiles() {
     row.addEventListener("click", () => {
       void selectFile(file.name);
     });
+    row.querySelector(".file-package-checkbox").addEventListener("click", event => {
+      event.stopPropagation();
+      if (event.currentTarget.checked) {
+        state.packageSelection.add(file.name);
+      } else {
+        state.packageSelection.delete(file.name);
+      }
+      updateVisibleCheckbox(files);
+      refs.updatePackageControls?.();
+    });
     row.querySelector(".row-play-button").addEventListener("click", event => {
       event.stopPropagation();
       void playFile(file.name);
     });
     els.fileTable.append(row);
   });
+  updateVisibleCheckbox(files);
+  refs.updatePackageControls?.();
 }
 
 export function ruleMarkup(file) {
@@ -125,8 +144,17 @@ export function updateSelectedLabels() {
   els.selectionBadge.textContent = state.selected.rule.isRule ? `${state.selected.rule.slot}${state.selected.rule.key}` : t("customAudio");
 }
 
-async function playFile(name) {
-  await selectFile(name);
+export async function playFile(name, { select = true } = {}) {
+  if (select) {
+    await selectFile(name);
+  } else {
+    const file = state.files.find(item => item.name === name);
+    if (!file) return;
+    els.audioPlayer.pause();
+    clearAudioSource();
+    els.audioPlayer.load();
+    els.audioPlayer.src = await audioUrl(file);
+  }
   els.audioPlayer.volume = state.volume;
   els.audioPlayer.currentTime = 0;
   const playPromise = els.audioPlayer.play();
@@ -160,4 +188,33 @@ function clearAudioSource() {
     state.audioObjectUrl = "";
   }
   els.audioPlayer.removeAttribute("src");
+}
+
+export function toggleVisibleFiles(checked) {
+  const search = els.searchInput.value.trim().toLowerCase();
+  const filter = els.ruleFilter.value;
+  state.files
+    .filter(file => {
+      const matchesSearch = !search || file.name.toLowerCase().includes(search);
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "rule" && file.rule.isRule) ||
+        (filter === "free" && !file.rule.isRule);
+      return matchesSearch && matchesFilter;
+    })
+    .forEach(file => {
+      if (checked) {
+        state.packageSelection.add(file.name);
+      } else {
+        state.packageSelection.delete(file.name);
+      }
+    });
+  renderFiles();
+}
+
+function updateVisibleCheckbox(files) {
+  if (!els.selectVisibleFiles) return;
+  const selected = files.filter(file => state.packageSelection.has(file.name)).length;
+  els.selectVisibleFiles.checked = files.length > 0 && selected === files.length;
+  els.selectVisibleFiles.indeterminate = selected > 0 && selected < files.length;
 }

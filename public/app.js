@@ -1,6 +1,14 @@
-import { chooseFolder, loadDefaults, loadFolder } from "./js/actions.js";
+import {
+  chooseFolder,
+  closePackageStatus,
+  loadDefaults,
+  loadFolder,
+  openPackageFolder,
+  packageSelectedFiles,
+  updatePackageControls
+} from "./js/actions.js";
 import { els, refs, state } from "./js/context.js";
-import { renderDefaultFolders, renderFiles, selectFile, updateSelectedLabels } from "./js/files.js";
+import { playFile, renderDefaultFolders, renderFiles, selectFile, toggleVisibleFiles, updateSelectedLabels } from "./js/files.js";
 import { applyLanguage, setLanguage } from "./js/language.js";
 import { hasLocalFolderAccess } from "./js/local-files.js";
 import { hasNativeDesktop } from "./js/native.js";
@@ -10,6 +18,7 @@ import {
   applyRename,
   closeManualRename,
   openManualRename,
+  playTargetFile,
   updateConflictStatus,
   updateManualRenameStatus
 } from "./js/inspector.js";
@@ -26,12 +35,14 @@ Object.assign(refs, {
   chooseFolder,
   closeManualRename,
   loadFolder,
+  playFile,
   renderDefaultFolders,
   renderFiles,
   renderLog,
   renderRules,
   renderTargetOptions,
   selectFile,
+  updatePackageControls,
   updateConflictStatus,
   updateManualRenameStatus,
   updateSelectedLabels
@@ -51,12 +62,20 @@ els.folderInput.addEventListener("keydown", event => {
 });
 els.searchInput.addEventListener("input", renderFiles);
 els.ruleFilter.addEventListener("change", renderFiles);
+els.selectVisibleFiles.addEventListener("change", event => toggleVisibleFiles(event.target.checked));
+els.packageNameInput.addEventListener("input", updatePackageControls);
+els.packageButton.addEventListener("click", packageSelectedFiles);
+els.openPackageFolderButton.addEventListener("click", openPackageFolder);
+els.closePackageStatusButton.addEventListener("click", closePackageStatus);
 els.targetRule.addEventListener("change", () => {
   renderRules();
   updateConflictStatus();
 });
 els.strategySelect.addEventListener("change", updateConflictStatus);
 els.strategySelect.addEventListener("change", updateManualRenameStatus);
+els.swapRenameInput.addEventListener("input", updateConflictStatus);
+els.swapRenameInput.addEventListener("input", updateManualRenameStatus);
+els.targetPlayButton.addEventListener("click", playTargetFile);
 els.applyButton.addEventListener("click", applyRename);
 els.editNameButton.addEventListener("click", openManualRename);
 els.manualRenameForm.addEventListener("submit", applyManualRename);
@@ -73,6 +92,7 @@ els.clearLogButton.addEventListener("click", () => {
 renderTargetOptions();
 renderRules();
 renderFiles();
+updatePackageControls();
 setPreviewVolume(state.volume);
 applyLanguage();
 if (!hasNativeDesktop() && !hasLocalFolderAccess()) {

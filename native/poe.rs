@@ -2,6 +2,7 @@ use base64::prelude::*;
 use serde::Serialize;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::time::UNIX_EPOCH;
 
 const AUDIO_EXTENSIONS: [&str; 6] = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"];
@@ -46,6 +47,14 @@ pub struct RenameResult {
 pub struct RenamePayload {
     result: RenameResult,
     files: Vec<AudioFile>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageZipResult {
+    target: String,
+    count: usize,
+    message: String,
 }
 
 #[tauri::command]
@@ -95,13 +104,45 @@ pub fn poe_rename_audio(
     source: String,
     target_base: String,
     strategy: Option<String>,
+    swap_rename_base: Option<String>,
 ) -> Result<RenamePayload, String> {
     let dir = normalize_dir(&dir)?;
-    let result = rename_audio(&dir, &source, &target_base, strategy.as_deref().unwrap_or("fail"))?;
+    let result = rename_audio(
+        &dir,
+        &source,
+        &target_base,
+        strategy.as_deref().unwrap_or("fail"),
+        swap_rename_base.as_deref(),
+    )?;
     Ok(RenamePayload {
         result,
         files: list_audio_files(&dir)?,
     })
+}
+
+#[tauri::command]
+pub fn poe_package_zip(
+    dir: String,
+    files: Vec<String>,
+    package_base: String,
+) -> Result<PackageZipResult, String> {
+    let dir = normalize_dir(&dir)?;
+    package_zip(&dir, files, &package_base)
+}
+
+#[tauri::command]
+pub fn poe_open_folder(dir: String, file: String) -> Result<(), String> {
+    let dir = normalize_dir(&dir)?;
+    ensure_directory(&dir)?;
+    if file.trim().is_empty() {
+        return open_folder(&dir, None);
+    }
+
+    let target_path = safe_zip_path(&dir, file.trim())?;
+    if !target_path.is_file() {
+        return Err("找不到 ZIP。".to_string());
+    }
+    open_folder(&dir, Some(&target_path))
 }
 
 fn default_folders() -> Vec<PathBuf> {
@@ -262,6 +303,7 @@ fn rename_audio(
     source: &str,
     target_base: &str,
     strategy: &str,
+    swap_rename_base: Option<&str>,
 ) -> Result<RenameResult, String> {
     ensure_directory(dir)?;
     assert_audio_file_name(source)?;
@@ -297,7 +339,8 @@ fn rename_audio(
     match strategy {
         "auto" => rename_with_suffix(dir, source, &requested_target, &clean_base, &source_ext),
         "swap" => swap_names(dir, source, &requested_target, &source_ext),
-        _ => Err("目標檔名已存在。請選擇交換名字或舊檔加後綴。".to_string()),
+        "swap-rename" => swap_and_rename(dir, source, &requested_target, &source_ext, swap_rename_base),
+        _ => Err("目標檔名已存在。請選擇交換名字、交換並改名或舊檔加後綴。".to_string()),
     }
 }
 
@@ -359,6 +402,52 @@ fn swap_names(dir: &Path, source: &str, requested_target: &str, ext: &str) -> Re
     ))
 }
 
+fn swap_and_rename(
+    dir: &Path,
+    source: &str,
+    requested_target: &str,
+    ext: &str,
+    swap_rename_base: Option<&str>,
+) -> Result<RenameResult, String> {
+    let clean_swap_base = clean_target_base(swap_rename_base.unwrap_or(""))?;
+    let displaced_target = format!("{clean_swap_base}{ext}");
+    assert_audio_file_name(&displaced_target)?;
+    if displaced_target.eq_ignore_ascii_case(requested_target) {
+        return Err("被交換檔名不能等於目標檔名。".to_string());
+    }
+    if !displaced_target.eq_ignore_ascii_case(source) && safe_path(dir, &displaced_target)?.exists() {
+        return Err("被交換檔名已存在。".to_string());
+    }
+
+    let temp = temp_name(dir, ext)?;
+    let source_path = safe_path(dir, source)?;
+    let target_path = safe_path(dir, requested_target)?;
+    let displaced_path = safe_path(dir, &displaced_target)?;
+    let temp_path = safe_path(dir, &temp)?;
+
+    fs::rename(&source_path, &temp_path).map_err(|err| err.to_string())?;
+    let mut target_moved = false;
+    if let Err(error) = fs::rename(&target_path, &displaced_path).and_then(|_| {
+        target_moved = true;
+        fs::rename(&temp_path, &target_path)
+    }) {
+        if target_moved && displaced_path.exists() && !target_path.exists() {
+            let _ = fs::rename(&displaced_path, &target_path);
+        }
+        let _ = fs::rename(&temp_path, &source_path);
+        return Err(error.to_string());
+    }
+
+    Ok(rename_result(
+        "swapped-renamed",
+        source,
+        requested_target,
+        Some(displaced_target.clone()),
+        None,
+        &format!("{source} 已改成 {requested_target}，原本的 {requested_target} 已改成 {displaced_target}。"),
+    ))
+}
+
 fn rename_result(
     action: &str,
     source: &str,
@@ -375,6 +464,122 @@ fn rename_result(
         swapped_with,
         message: message.to_string(),
     }
+}
+
+fn package_zip(dir: &Path, files: Vec<String>, package_base: &str) -> Result<PackageZipResult, String> {
+    ensure_directory(dir)?;
+    if files.is_empty() {
+        return Err("請先選擇要打包的音效。".to_string());
+    }
+
+    let clean_base = clean_package_base(package_base)?;
+    let target = unique_zip_name(dir, &clean_base)?;
+    let target_path = safe_zip_path(dir, &target)?;
+    let stage = dir.join(format!(".poe-audio-package-{}-{}", std::process::id(), modified_stamp()));
+    fs::create_dir(&stage).map_err(|err| err.to_string())?;
+
+    let result = (|| {
+        for file in &files {
+            let source = safe_path(dir, file)?;
+            if !source.is_file() {
+                return Err(format!("{file} 不存在。"));
+            }
+            fs::copy(source, stage.join(file)).map_err(|err| err.to_string())?;
+        }
+
+        compress_directory(&stage, &target_path)?;
+        Ok(PackageZipResult {
+            target: target.clone(),
+            count: files.len(),
+            message: format!("已建立 {target}，包含 {} 個音效。", files.len()),
+        })
+    })();
+
+    let _ = fs::remove_dir_all(stage);
+    if result.is_err() {
+        let _ = fs::remove_file(target_path);
+    }
+    result
+}
+
+fn clean_package_base(input: &str) -> Result<String, String> {
+    let raw = input.trim();
+    if raw.is_empty() {
+        return Err("請輸入 ZIP 名稱。".to_string());
+    }
+
+    let mut base = if extension(raw) == ".zip" {
+        raw[..raw.len() - 4].to_string()
+    } else {
+        raw.to_string()
+    };
+    base.retain(|ch| !matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') && !ch.is_control());
+    let base = base.trim_end_matches(['.', ' ']).trim().to_string();
+    if base.is_empty() {
+        Err("ZIP 名稱無效。".to_string())
+    } else {
+        Ok(base)
+    }
+}
+
+fn safe_zip_path(dir: &Path, file_name: &str) -> Result<PathBuf, String> {
+    let path = Path::new(file_name);
+    if path.components().count() != 1
+        || path.components().any(|component| !matches!(component, Component::Normal(_)))
+        || extension(file_name) != ".zip"
+    {
+        return Err("ZIP 檔名無效。".to_string());
+    }
+    Ok(dir.join(file_name))
+}
+
+fn unique_zip_name(dir: &Path, base: &str) -> Result<String, String> {
+    let mut index = 2;
+    let mut candidate = format!("{base}.zip");
+    while safe_zip_path(dir, &candidate)?.exists() {
+        candidate = format!("{base}_{index}.zip");
+        index += 1;
+    }
+    Ok(candidate)
+}
+
+fn compress_directory(stage: &Path, target_path: &Path) -> Result<(), String> {
+    let output = Command::new("powershell.exe")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Compress-Archive -Path $env:POE_ZIP_SOURCE -DestinationPath $env:POE_ZIP_TARGET -Force",
+        ])
+        .env("POE_ZIP_SOURCE", stage.join("*"))
+        .env("POE_ZIP_TARGET", target_path)
+        .output()
+        .map_err(|err| err.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        Err(if message.is_empty() { "建立 ZIP 失敗。".to_string() } else { message })
+    }
+}
+
+fn open_folder(dir: &Path, target: Option<&Path>) -> Result<(), String> {
+    let mut command = Command::new("explorer.exe");
+    if let Some(target) = target {
+        command.arg(format!("/select,{}", target.to_string_lossy()));
+    } else {
+        command.arg(dir);
+    }
+    command.spawn().map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn modified_stamp() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0)
 }
 
 fn assert_audio_file_name(file_name: &str) -> Result<(), String> {

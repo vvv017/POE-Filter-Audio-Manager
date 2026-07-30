@@ -75,6 +75,18 @@ export function translateServerError(message, lang) {
     "目標檔名已存在。請選擇交換名字或舊檔加後綴。": {
       zh: "目標檔名已存在。請選擇交換名字或舊檔加後綴。",
       en: "The target file name already exists. Choose swap names or suffix old file."
+    },
+    "目標檔名已存在。請選擇交換名字、交換並改名或舊檔加後綴。": {
+      zh: "目標檔名已存在。請選擇交換名字、交換並改名或舊檔加後綴。",
+      en: "The target file name already exists. Choose swap, swap and rename, or suffix old file."
+    },
+    "被交換檔名不能等於目標檔名。": {
+      zh: "被交換檔名不能等於目標檔名。",
+      en: "The swapped file name cannot equal the target file name."
+    },
+    "被交換檔名已存在。": {
+      zh: "被交換檔名已存在。",
+      en: "The swapped file name already exists."
     }
   };
   return map[message]?.[lang] || message;

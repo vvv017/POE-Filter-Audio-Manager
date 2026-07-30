@@ -16,11 +16,11 @@ patchFile(libPath, [
   ["mod app;\nmod util;", "mod app;\nmod util;\nmod poe;"],
   [
     "use util::get_pake_config;",
-    `use util::get_pake_config;\nuse poe::{\n    poe_choose_folder, poe_default_folders, poe_list_files, poe_read_audio,\n    poe_rename_audio,\n};`
+    `use util::get_pake_config;\nuse poe::{\n    poe_choose_folder, poe_default_folders, poe_list_files, poe_open_folder, poe_package_zip,\n    poe_read_audio, poe_rename_audio,\n};`
   ],
   [
     "set_zoom,\n        ])",
-    `set_zoom,\n            poe_default_folders,\n            poe_choose_folder,\n            poe_list_files,\n            poe_read_audio,\n            poe_rename_audio,\n        ])`
+    `set_zoom,\n            poe_default_folders,\n            poe_choose_folder,\n            poe_list_files,\n            poe_read_audio,\n            poe_rename_audio,\n            poe_package_zip,\n            poe_open_folder,\n        ])`
   ]
 ]);
 
@@ -30,6 +30,12 @@ patchFile(cargoPath, [
 
 function patchFile(file, replacements) {
   let text = fs.readFileSync(file, "utf8");
+  if (file === libPath) {
+    text = text
+      .replace(/\nmod poe;/g, "")
+      .replace(/\nuse poe::\{[\s\S]*?\};/g, "")
+      .replace(/\n\s+poe_[a-z_]+,/g, "");
+  }
   for (const [needle, replacement] of replacements) {
     if (text.includes(replacement)) continue;
     if (!text.includes(needle)) {

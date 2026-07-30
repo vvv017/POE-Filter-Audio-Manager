@@ -18,12 +18,28 @@ export function nativeAudioUrl(dir, file) {
   return invoke("poe_read_audio", { dir, file });
 }
 
-export function nativeRenameAudio({ dir, source, targetBase, strategy }) {
+export function nativeRenameAudio({ dir, source, targetBase, strategy, swapRenameBase }) {
   return invoke("poe_rename_audio", {
     dir,
     source,
+    swapRenameBase,
     targetBase,
     strategy
+  });
+}
+
+export function nativePackageZip({ dir, files, packageBase }) {
+  return invoke("poe_package_zip", {
+    dir,
+    files,
+    packageBase
+  });
+}
+
+export function nativeOpenFolder({ dir, file }) {
+  return invoke("poe_open_folder", {
+    dir,
+    file
   });
 }
 

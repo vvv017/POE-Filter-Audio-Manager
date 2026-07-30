@@ -31,6 +31,14 @@ export function pushRenameLog(result) {
     pushLog("renameSwapped", { source: result.source, target: result.target });
     return;
   }
+  if (result.action === "swapped-renamed" && result.displacedTarget) {
+    pushLog("renameSwappedRenamed", {
+      displacedTarget: result.displacedTarget,
+      source: result.source,
+      target: result.target
+    });
+    return;
+  }
   if (result.action === "renamed-auto" && result.displacedTarget) {
     pushLog("renameAuto", {
       displacedTarget: result.displacedTarget,

@@ -66,11 +66,23 @@
               <option value="rule">已符合規則</option>
               <option value="free">未套規則</option>
             </select>
+            <input id="packageNameInput" placeholder="ZIP 名稱" autocomplete="off" spellcheck="false">
+            <button id="packageButton" type="button" disabled>打包 ZIP</button>
+            <span id="packageSelectionCount" class="package-selection-count">已選 0 個</span>
+          </div>
+          <div id="packageStatus" class="package-status" aria-live="polite" hidden>
+            <progress id="packageProgress"></progress>
+            <span id="packageStatusText"></span>
+            <div class="package-status-actions">
+              <button id="openPackageFolderButton" type="button" hidden>打開 ZIP 所在資料夾</button>
+              <button id="closePackageStatusButton" type="button" hidden>關閉</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th class="select-column"><input id="selectVisibleFiles" type="checkbox" title="選擇顯示中的音效" aria-label="選擇顯示中的音效"></th>
                   <th>檔名</th>
                   <th>規則</th>
                   <th>大小</th>
@@ -113,16 +125,27 @@
 
           <div class="rename-form">
             <label for="targetRule">目標檔名</label>
-            <select id="targetRule">
-              <option value="">選擇規則</option>
-            </select>
+            <div class="target-rule-row">
+              <select id="targetRule">
+                <option value="">選擇規則</option>
+              </select>
+              <button id="targetPlayButton" class="mini-icon-button" type="button" title="播放目標檔名" aria-label="播放目標檔名" disabled>▶</button>
+            </div>
 
-            <label for="strategySelect">重名處理</label>
+            <label for="strategySelect">檔名處理</label>
             <select id="strategySelect">
               <option value="fail">先停下來</option>
               <option value="swap">交換名字</option>
+              <option value="swap-rename">交換並改名</option>
               <option value="auto">舊檔加後綴</option>
             </select>
+            <div id="swapRenameFields" class="swap-rename-fields" hidden>
+              <label for="swapRenameInput">被交換檔案的新名字</label>
+              <div class="manual-name-row">
+                <input id="swapRenameInput" autocomplete="off" spellcheck="false" placeholder="輸入新檔名">
+                <span id="swapRenameExtension">.mp3</span>
+              </div>
+            </div>
 
             <div id="conflictStatus" class="status-line">等待目標名字</div>
             <button id="applyButton" class="primary-action" disabled>套用改名</button>
